@@ -49,6 +49,8 @@ func main() {
 		"dotnet add package HotChocolate.Data > /dev/null 2>&1",
 		"dotnet add package HotChocolate.Data.EntityFramework > /dev/null 2>&1",
 		"dotnet add package HotChocolate.Types.Analyzers > /dev/null 2>&1",
+		"echo '[assembly: Module(\"GraphQLTypes\")]' > Properties/ModuleInfo.cs",
+		"rm -f *.http appsettings*.json",
 	}
 
 	for _, cmd := range commands {
