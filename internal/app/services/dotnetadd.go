@@ -1,23 +1,26 @@
-package main
+package services
 
 import (
 	"fmt"
-	"log"
 	"os"
-	"os/exec"
+	"package/gqlnet/internal/infra"
 )
 
-func main() {
+type ProjectScaffolder struct {
+	Executor infra.Executor
+}
 
-	solutionName := "d"
-	projectName := "d"
+func NewProjectScaffolder(exec infra.Executor) *ProjectScaffolder {
+	return &ProjectScaffolder{Executor: exec}
+}
 
+func (s *ProjectScaffolder) Runner(solutionName, projectName string) error {
 	if err := os.MkdirAll(solutionName, 0755); err != nil {
-		return
+		return err
 	}
 
 	if err := os.Chdir(solutionName); err != nil {
-		return
+		return err
 	}
 
 	commands := []string{
@@ -27,19 +30,19 @@ func main() {
 	}
 
 	for _, cmd := range commands {
-		fmt.Println("›", cmd)
-
-		cmd := exec.Command("bash", "-c", cmd)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
-			log.Fatalf("command failed: %s\n%v", cmd, err)
+		if err := s.Executor.Exec(cmd); err != nil {
+			return err
 		}
 	}
 
 	if err := os.Chdir(projectName); err != nil {
-		return
+		return err
+	}
+
+	if _, err := os.Stat("Properties"); os.IsNotExist(err) {
+		if err := os.Mkdir("Properties", 0755); err != nil {
+			fmt.Printf("Failed to create Properties directory: %v\n", err)
+		}
 	}
 
 	commands = []string{
@@ -54,14 +57,15 @@ func main() {
 	}
 
 	for _, cmd := range commands {
-		fmt.Println("›", cmd)
-
-		cmd := exec.Command("bash", "-c", cmd)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
-			log.Fatalf("command failed: %s\n%v", cmd, err)
+		if err := s.Executor.Exec(cmd); err != nil {
+			return err
 		}
 	}
+
+	if err := s.Executor.Exec("dotnet ef --version"); err != nil {
+		s.Executor.Exec("dotnet tool install --global dotnet-ef > /dev/null 2>&1")
+		s.Executor.Exec("export PATH=\"$PATH:$HOME/.dotnet/tools\"")
+	}
+
+	return nil
 }
